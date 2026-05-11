@@ -2,17 +2,11 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage';
 import { ROUTES } from '../../utils/constants';
 
-/**
- * Sprint 2 — Login Test Suite
- * Bu dosya credentials alındıktan sonra aktif hale gelecek.
- * Şu an tüm testler skip edilmiş durumda.
- */
-
-const USER_EMAIL = process.env.TEST_USER_EMAIL || '';
-const USER_PASSWORD = process.env.TEST_USER_PASSWORD || '';
+// Credentials — .env dosyasından okunur, yoksa default kullanılır
+const USER_EMAIL = process.env.TEST_USER_EMAIL || 'hasan@gmail.com';
+const USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'Guvenli123';
 
 test.describe('Login — Smoke Suite @smoke', () => {
-  test.skip(!USER_EMAIL, 'TEST_USER_EMAIL env değişkeni tanımlı değil — Sprint 2');
 
   test('TC-L001: Login sayfası yükleniyor', async ({ page }) => {
     const loginPage = new LoginPage(page);
@@ -67,7 +61,6 @@ test.describe('Login — Smoke Suite @smoke', () => {
 });
 
 test.describe('Login — Regression Suite @regression', () => {
-  test.skip(!USER_EMAIL, 'TEST_USER_EMAIL env değişkeni tanımlı değil — Sprint 2');
 
   test('TC-L008: XSS payload email alanında zararsız', async ({ page }) => {
     const loginPage = new LoginPage(page);
