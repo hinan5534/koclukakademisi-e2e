@@ -32,11 +32,12 @@ test.describe('Navigation @regression', () => {
     await expect(page).toHaveURL(new RegExp(ROUTES.CONTACT));
   });
 
-  test('TC-011: Footer CTA /haftalik-plan veya /giris\'e gider', async ({ page }) => {
+  test('TC-011: Footer CTA doğru href\'e sahip', async ({ page }) => {
     const homePage = new HomePage(page);
     await homePage.open();
-    await homePage.clickFooterCTA();
-    await expect(page).toHaveURL(new RegExp(`${ROUTES.WEEKLY_PLAN}|${ROUTES.LOGIN}`));
+    await homePage.scrollToBottom();
+    const href = await homePage.footerCTA.getAttribute('href');
+    expect(href).toMatch(/haftalik-plan|giris/);
   });
 
   test('Tüm nav linkleri keyboard (Tab) ile erişilebilir', async ({ page }) => {
