@@ -51,7 +51,6 @@ test.describe('Homepage — Regression Suite @regression', () => {
     if (hasFakePhone) {
       console.warn('BUG TC-028b: Sahte telefon numarası (+90 212 123 45 67) hâlâ görünür');
     }
-    // Soft-fail: geliştirici ekibine raporlandı
   });
 
   test('TC-024: Footer quick links görünür', async ({ page }) => {

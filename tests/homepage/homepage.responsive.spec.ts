@@ -23,13 +23,17 @@ test.describe('Homepage — Responsive Suite @regression', () => {
   }
 
   test('TC-031b: Tablet 768px — [KNOWN BUG] layout sorunu', async ({ page }) => {
+    // BUG: 768px viewport'ta layout bozuluyor
     await page.setViewportSize(VIEWPORTS.TABLET);
     const homePage = new HomePage(page);
     await homePage.open();
-    const hasOverflow = await page.evaluate(() => document.body.scrollWidth > window.innerWidth);
+    const hasOverflow = await page.evaluate(
+      () => document.body.scrollWidth > window.innerWidth
+    );
     if (hasOverflow) {
-      console.warn('BUG TC-031b: Tablet 768px horizontal scroll var');
+      console.warn('BUG TC-031b: Tablet 768px horizontal scroll var — layout bozuk');
     }
+    // Hero heading en azından görünür olmalı
     await expect(homePage.heroHeading).toBeVisible();
   });
 
@@ -45,17 +49,20 @@ test.describe('Homepage — Responsive Suite @regression', () => {
     await page.setViewportSize(VIEWPORTS.MOBILE_S);
     const homePage = new HomePage(page);
     await homePage.open();
+    await expect(homePage.featuresSectionHeading).toBeVisible();
     const count = await homePage.getFeatureCardCount();
     expect(count).toBeGreaterThanOrEqual(9);
   });
 
-  test('Mobile: [KNOWN BUG] Giriş Yap hamburger menüde gizli', async ({ page }) => {
+  test('Mobile: [KNOWN BUG] Giriş Yap butonu hamburger menüde gizli', async ({ page }) => {
+    // BUG: Mobilde "Giriş Yap" butonu hamburger menü arkasında — doğrudan görünmüyor
     await page.setViewportSize(VIEWPORTS.MOBILE_S);
     const homePage = new HomePage(page);
     await homePage.open();
     const isVisible = await homePage.header.btnLogin.isVisible().catch(() => false);
     if (!isVisible) {
-      console.warn('BUG: Mobilde Giriş Yap butonu hamburger menüde gizli');
+      console.warn('BUG: Mobilde Giriş Yap butonu görünmüyor — hamburger menüde gizli');
     }
+    // Soft-fail
   });
 });
