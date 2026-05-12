@@ -14,8 +14,6 @@ export class LoginPage extends BasePage {
   constructor(page: Page) {
     super(page);
 
-    // Sayfada iki sekme var: "Giriş" ve "Kurumsal Giriş"
-    // Sadece normal "Giriş" sekmesini kullanıyoruz — kurumsal ile karışmaması için
     this.normalLoginTab = page
       .getByRole('tab', { name: /^giriş$/i })
       .or(page.getByRole('button', { name: /^giriş$/i }))
@@ -31,7 +29,6 @@ export class LoginPage extends BasePage {
       .or(page.locator('input[type="password"]'))
       .first();
 
-    // first() — kurumsal form'un submit butonuyla karışmaması için
     this.submitButton = page
       .getByRole('button', { name: /giriş yap/i })
       .or(page.locator('button[type="submit"]'))
@@ -47,7 +44,6 @@ export class LoginPage extends BasePage {
 
   async open(): Promise<void> {
     await this.navigate(ROUTES.LOGIN);
-    // Eğer "Giriş" tab'ı görünürse tıkla — kurumsal tab varsayılan aktif olabilir
     const tabVisible = await this.normalLoginTab.isVisible().catch(() => false);
     if (tabVisible) {
       await this.normalLoginTab.click();
@@ -59,16 +55,19 @@ export class LoginPage extends BasePage {
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.submitButton.click();
-    await this.page.waitForLoadState('networkidle');
   }
 
   async loginAndExpectSuccess(email: string, password: string): Promise<void> {
     await this.login(email, password);
+    // SPA olduğu için URL değişimi yavaş olabilir — önce networkidle bekle, sonra URL kontrol et
+    await this.page.waitForLoadState('networkidle', { timeout: 15_000 });
+    await this.page.waitForTimeout(1000);
     await expect(this.page).not.toHaveURL(new RegExp(ROUTES.LOGIN), { timeout: 15_000 });
   }
 
   async loginAndExpectError(email: string, password: string): Promise<void> {
     await this.login(email, password);
+    await this.page.waitForLoadState('networkidle');
     const stayedOnLogin = this.page.url().includes(ROUTES.LOGIN);
     if (!stayedOnLogin) {
       await expect(this.errorMessage).toBeVisible({ timeout: 5_000 });
