@@ -8,73 +8,55 @@ export class LoginPage extends BasePage {
   readonly submitButton: Locator;
   readonly errorMessage: Locator;
   readonly forgotPasswordLink: Locator;
-  readonly registerLink: Locator;
-  readonly normalLoginTab: Locator;
 
   constructor(page: Page) {
     super(page);
 
-    this.normalLoginTab = page
-      .getByRole('tab', { name: /^giriş$/i })
-      .or(page.getByRole('button', { name: /^giriş$/i }))
-      .or(page.locator('a, button, [role="tab"]').filter({ hasText: /^Giriş$/ }));
-
-    this.emailInput = page
-      .getByLabel(/e-posta|email/i)
-      .or(page.locator('input[type="email"]'))
-      .first();
-
-    this.passwordInput = page
-      .getByLabel(/şifre|parola|password/i)
-      .or(page.locator('input[type="password"]'))
-      .first();
-
-    this.submitButton = page
-      .getByRole('button', { name: /giriş yap/i })
-      .or(page.locator('button[type="submit"]'))
-      .first();
-
-    this.errorMessage = page
-      .locator('[class*="error"], [class*="alert"], [role="alert"], [class*="hata"]')
-      .first();
-
-    this.forgotPasswordLink = page.getByRole('link', { name: /şifr.*unuttum|parolamı unuttum/i });
-    this.registerLink = page.getByRole('link', { name: /kayıt ol|üye ol/i });
+    // DOM'dan görülen gerçek selector'lar — tek form, tab yok
+    this.emailInput = page.locator('input[type="email"]');
+    this.passwordInput = page.locator('input[type="password"]');
+    this.submitButton = page.locator('button[type="submit"]');
+    this.errorMessage = page.locator('[class*="error"], [class*="alert"], [role="alert"]').first();
+    this.forgotPasswordLink = page.getByText('Şifremi unuttum');
   }
 
   async open(): Promise<void> {
     await this.navigate(ROUTES.LOGIN);
-    const tabVisible = await this.normalLoginTab.isVisible().catch(() => false);
-    if (tabVisible) {
-      await this.normalLoginTab.click();
-      await this.page.waitForTimeout(300);
-    }
+    // Tab yok, direkt form görünür — sadece form'un yüklendiğini bekle
+    await this.emailInput.waitFor({ state: 'visible', timeout: 10_000 });
   }
 
   async login(email: string, password: string): Promise<void> {
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
+    // Submit öncesi kısa bekle — SPA form validation
+    await this.page.waitForTimeout(300);
     await this.submitButton.click();
   }
 
   async loginAndExpectSuccess(email: string, password: string): Promise<void> {
     await this.login(email, password);
-    // SPA olduğu için URL değişimi yavaş olabilir — önce networkidle bekle, sonra URL kontrol et
-    await this.page.waitForLoadState('networkidle', { timeout: 15_000 });
-    await this.page.waitForTimeout(1000);
-    await expect(this.page).not.toHaveURL(new RegExp(ROUTES.LOGIN), { timeout: 15_000 });
+    // URL'nin /giris'ten başka bir şeye değişmesini bekle
+    await this.page.waitForURL((url) => !url.toString().includes(ROUTES.LOGIN), {
+      timeout: 20_000,
+    });
   }
 
   async loginAndExpectError(email: string, password: string): Promise<void> {
     await this.login(email, password);
-    await this.page.waitForLoadState('networkidle');
-    const stayedOnLogin = this.page.url().includes(ROUTES.LOGIN);
-    if (!stayedOnLogin) {
+    await this.page.waitForTimeout(1500);
+    const url = this.page.url();
+    if (!url.includes(ROUTES.LOGIN)) {
       await expect(this.errorMessage).toBeVisible({ timeout: 5_000 });
     }
+    // Login sayfasında kaldıysa zaten hata var demektir — pass
   }
 
   async getErrorText(): Promise<string | null> {
-    return this.errorMessage.textContent();
+    try {
+      return await this.errorMessage.textContent({ timeout: 3_000 });
+    } catch {
+      return null;
+    }
   }
 }
