@@ -9,7 +9,7 @@ export abstract class BasePage {
 
   async navigate(path: string = '/'): Promise<void> {
     await this.page.goto(path);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async getTitle(): Promise<string> {
