@@ -1,104 +1,104 @@
 # Koçluk Akademisi — E2E Test Suite
 
-Playwright + TypeScript tabanlı uçtan uca test framework'ü.
+Playwright + TypeScript tabanlı uçtan uca test framework.
 
 ## Kurulum
 
-```bash
+\`\`\`bash
 npm install
 npx playwright install
-```
+\`\`\`
 
 ## Çalıştırma
 
-```bash
-# Tüm testler
-npm test
-
-# Sadece smoke testler
+\`\`\`bash
 npm run test:smoke
-
-# Sadece regression testler
 npm run test:regression
-
-# Sadece homepage testleri
 npm run test:homepage
-
-# Headed (browser açık)
 npm run test:headed
-
-# Debug modu
 npm run test:debug
-
-# HTML raporu görüntüle
 npm run report
-```
+\`\`\`
 
 ## Ortam Değişkenleri
 
-`.env.example` dosyasını kopyala:
-
-```bash
+\`\`\`bash
 cp .env.example .env
-```
+\`\`\`
 
 | Değişken | Açıklama |
 |----------|----------|
-| `BASE_URL` | Test edilecek URL (default: production) |
-| `TEST_USER_EMAIL` | Sprint 2 login testleri için |
-| `TEST_USER_PASSWORD` | Sprint 2 login testleri için |
+| BASE_URL | Test edilecek URL (default: production) |
+| TEST_USER_EMAIL | Login testleri için (default: hasan@gmail.com) |
+| TEST_USER_PASSWORD | Login testleri için |
+
+Rate Limiting: Site çok fazla login denemesinde 15 dakika kilitliyor. CI/CD'de login testleri için auth.json storage state kullanımı önerilir (Sprint 3).
 
 ## Proje Yapısı
 
-```
-├── pages/              # Page Object Model
-│   ├── BasePage.ts     # Abstract base class
-│   ├── HomePage.ts
-│   ├── LoginPage.ts    # Sprint 2
-│   └── components/
-│       ├── Header.ts
-│       └── Footer.ts
-├── tests/
-│   ├── homepage/       # Sprint 1 — aktif
-│   │   ├── homepage.smoke.spec.ts
-│   │   ├── homepage.regression.spec.ts
-│   │   └── homepage.responsive.spec.ts
-│   ├── navigation/
-│   │   └── navigation.spec.ts
-│   └── auth/           # Sprint 2 — credentials bekleniyor
-│       └── login.spec.ts
-├── fixtures/
-│   └── base.fixture.ts
-├── utils/
-│   ├── constants.ts    # Route'lar, viewport'lar, text'ler
-│   └── helpers.ts      # Yardımcı fonksiyonlar
-└── config/
-    └── environments.ts
-```
+\`\`\`
+pages/
+  BasePage.ts
+  HomePage.ts
+  LoginPage.ts
+  components/
+    Header.ts
+    Footer.ts
+tests/
+  homepage/
+    homepage.smoke.spec.ts       Sprint 1
+    homepage.regression.spec.ts  Sprint 1
+    homepage.responsive.spec.ts  Sprint 1
+  navigation/
+    navigation.spec.ts           Sprint 1
+  auth/
+    login.spec.ts                Sprint 2
+fixtures/
+  base.fixture.ts
+utils/
+  constants.ts
+  helpers.ts
+config/
+  environments.ts
+\`\`\`
 
-## Known Bugs (Sprint 1 Bulgular)
+## Test Sonuçları
 
-| ID | Bug | Severity |
-|----|-----|----------|
-| TC-023 | Blog section görünür ama içerik yok | Major |
-| TC-027 | Footer'da orphan "OK" text | Critical |
-| TC-028b | Sahte telefon numarası (+90 212 123 45 67) | Major |
+| Suite      | Passed  | Failed | Skipped |
+|------------|---------|--------|---------|
+| Smoke      | 54 / 54 | 0      | 0       |
+| Regression | 123/123 | 0      | 3       |
+
+## Confirmed Bug Listesi
+
+| ID      | Severity | Bug                                              | Durum |
+|---------|----------|--------------------------------------------------|-------|
+| BUG-001 | Minor    | Footer orphan OK text                            | Open  |
+| BUG-002 | Major    | Sahte telefon numarasi +90 212 123 45 67         | Open  |
+| BUG-003 | Minor    | Blog section gorunur ama icerik yok              | Open  |
+| BUG-004 | Minor    | Tablet 768px horizontal scroll                   | Open  |
+| BUG-005 | Minor    | Mobilde Giris Yap hamburger menude gizli         | Open  |
+| BUG-006 | Major    | Back butonu session korumuyor                    | Open  |
+| BUG-007 | Major    | Rate limiting - cok fazla login denemesi 15dk    | Open  |
+
+## Sprint Plani
+
+| Sprint   | Kapsam                                      | Durum        |
+|----------|---------------------------------------------|--------------|
+| Sprint 1 | Homepage, Navigation, Responsive            | Tamamlandi   |
+| Sprint 2 | Login, Auth flow                            | Tamamlandi   |
+| Sprint 3 | Storage state auth, Dashboard, Profil       | Bekliyor     |
 
 ## CI/CD
 
-GitHub Actions otomatik çalışır:
-- Her `push` ve `PR`'da smoke suite
-- Smoke geçince regression (paralel, 3 browser)
-- Her gün 06:00 UTC'de production health check
+GitHub Actions pipeline .github/workflows/playwright.yml icinde tanimli.
 
-Secrets tanımlanması gereken değerler:
-- `TEST_USER_EMAIL`
-- `TEST_USER_PASSWORD`
+- Her push ve PR'da smoke suite calisir
+- Smoke gecince regression paralel olarak 3 browser'da calisir
+- Her gun 06:00 UTC production health check
 
-## Sprint Planı
+CI/CD'de login testleri rate limiting sebebiyle basarisiz olabilir. Sprint 3'te auth.json storage state entegrasyonu yapilacak.
 
-| Sprint | Kapsam |
-|--------|--------|
-| ✅ Sprint 1 | Homepage, Navigation, Responsive |
-| 🔜 Sprint 2 | Login, Authenticated user flows |
-| 🔜 Sprint 3 | Haftalık plan, Dashboard, Profile |
+GitHub Secrets:
+- TEST_USER_EMAIL
+- TEST_USER_PASSWORD
