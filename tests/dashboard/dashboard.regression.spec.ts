@@ -14,9 +14,7 @@ test.describe('Dashboard — Regression Suite @regression', () => {
   test('TC-D011: Tüm nav linkleri authenticated kullanıcıya görünür', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.open();
-    // Authenticated kullanıcıya en az bir nav link görünmeli
-    const url = page.url();
-    expect(url).not.toContain('/giris');
+    await expect(dashboard.weeklyPlanLink).toBeVisible();
   });
 
   test('TC-D012: Logout sonrası /giris\'e yönlendiriyor', async ({ page }) => {
@@ -44,8 +42,7 @@ test.describe('Dashboard — Regression Suite @regression', () => {
     await page.waitForLoadState('domcontentloaded');
     // hasan@gmail.com görünmeli
     const bodyText = await page.locator('body').textContent();
-    // Profil sayfası yüklendi ve içerik var
-    expect(bodyText?.length).toBeGreaterThan(50);
+    expect(bodyText).toContain('hasan');
   });
 
   test('TC-D015: İstatistikler sayfasında grafik veya veri var', async ({ page }) => {

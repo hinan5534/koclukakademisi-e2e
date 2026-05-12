@@ -5,4 +5,3 @@ test-results/
 .env
 *.local
 .DS_Store
-auth.json
