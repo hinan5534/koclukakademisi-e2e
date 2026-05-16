@@ -1,168 +1,184 @@
 # Koçluk Akademisi — E2E Test Suite
 
-Playwright + TypeScript tabanlı uçtan uca test framework. Sprint 1'den Sprint 4'e kadar tüm özellikler test edilmiştir.
+Playwright + TypeScript tabanlı end-to-end test altyapısı. Page Object Model mimarisi, paralel test execution ve GitHub Actions CI/CD pipeline ile production-grade bir QA sistemi.
 
 ---
 
+## Gereksinimler
+
+- Node.js 20+
+- npm 10+
+
 ## Kurulum
 
-\`\`\`bash
+```bash
+git clone https://github.com/hinan5534/koclukakademisi-e2e
+cd koclukakademisi-e2e
 npm install
 npx playwright install
-\`\`\`
+cp .env.example .env
+```
 
-## Çalıştırma
+## Auth Session Oluşturma
 
-\`\`\`bash
-# Smoke suite (~37sn)
+Dashboard testleri Playwright storage state kullanır. İlk çalıştırmadan önce session oluştur:
+
+```bash
+npx ts-node setup-auth.ts
+```
+
+Script headful browser açar. Giriş yaptıktan sonra terminalde Enter'a bas. `auth.json` oluşur ve dashboard testleri bu dosyayı kullanır. Dosya `.gitignore`'dadır, commit edilmez. Session süresi dolduğunda tekrar çalıştır.
+
+---
+
+## Testleri Çalıştırma
+
+```bash
+# Kritik path kontrolü — CI'da her commit'te çalışır
 npm run test:smoke
 
-# Regression suite (~2.1dk)
+# Tüm test suite — merge öncesi çalıştır
 npm run test:regression
 
-# Sadece homepage
-npm run test:homepage
+# Belirli dosya
+npx playwright test tests/dashboard/
 
-# Headed (browser açık)
-npm run test:headed
+# Belirli browser
+npx playwright test --project=chromium
 
 # Debug modu
 npm run test:debug
 
+# Headed (browser görünür)
+npm run test:headed
+
 # HTML raporu
 npm run report
-\`\`\`
+```
 
 ---
 
-## Auth (Dashboard Testleri İçin Zorunlu)
+## Mimari
 
-Dashboard testleri auth.json session dosyasına ihtiyaç duyar:
+```
+pages/                  POM katmanı
+  BasePage.ts           Tüm page object'lerin base class'ı
+  HomePage.ts           Ana sayfa
+  LoginPage.ts          Login sayfası
+  DashboardPage.ts      Dashboard sayfası
+  components/
+    Header.ts           Header component
+    Footer.ts           Footer component
 
-\`\`\`bash
-npx ts-node setup-auth.ts
-\`\`\`
+tests/                  Test dosyaları
+  homepage/             Smoke + Regression + Responsive
+  navigation/           Nav link testleri
+  auth/                 Login, session, rate limit
+  dashboard/            Authenticated user flow testleri
 
-Browser açılır, elle giriş yap, terminalde Enter bas, auth.json kaydedilir.
+utils/
+  constants.ts          Route'lar, viewport'lar, sabit metinler
+  helpers.ts            assertNoHorizontalScroll, captureConsoleErrors vb.
 
-auth.json .gitignore'a eklenmiştir — repo'ya commit edilmez.
-Session süresi dolduğunda tekrar oluşturulması gerekir.
+config/
+  environments.ts       Production / Staging / Local config
+
+setup-auth.ts           Auth.json oluşturan script
+playwright.config.ts    Paralel execution, browser matrix, reporter config
+```
+
+### Page Object Modeli
+
+```typescript
+// Örnek kullanım
+const homePage = new HomePage(page);
+await homePage.open();
+await homePage.header.clickLogin();
+await homePage.assertFeatureCardLinks();
+```
+
+### Test Anatomy
+
+```typescript
+test.describe('Dashboard @regression', () => {
+  test.use({ storageState: 'auth.json' });
+
+  test('TC-D002: Haftalık Plan yükleniyor', async ({ page }) => {
+    await page.goto(ROUTES.WEEKLY_PLAN);
+    await expect(page.getByRole('heading', { name: 'Haftalık Plan' })).toBeVisible();
+    await expect(page.getByText('Merhaba Hasan Hoca')).toBeVisible();
+  });
+});
+```
+
+---
+
+## Test Coverage
+
+| Katman | Kapsam | Test Sayısı |
+|--------|--------|:-----------:|
+| Smoke | Critical path, auth guard, mobile layout | 54 |
+| Regression | Tüm sayfalar, nav, footer, session, feature cards | 144 |
+| Dashboard | Haftalık Plan, Günlük Görevler, İstatistikler, Profil, Takvim, Not Defteri, Arkadaşlar, Deneme Analizi | 54 |
+| **Toplam** | | **198** |
+
+**Son çalışma:** Smoke 54/54 ✅ · Regression 198/198 ✅ · Süre ~2dk
 
 ---
 
 ## Ortam Değişkenleri
 
-\`\`\`bash
-cp .env.example .env
-\`\`\`
-
 | Değişken | Açıklama | Default |
 |----------|----------|---------|
-| BASE_URL | Test edilecek URL | https://koclukakademisi.com |
-| TEST_USER_EMAIL | Login test kullanıcısı | hasan@gmail.com |
-| TEST_USER_PASSWORD | Login test şifresi | — |
+| `BASE_URL` | Test URL'i | `https://koclukakademisi.com` |
+| `TEST_USER_EMAIL` | Login kullanıcısı | `hasan@gmail.com` |
+| `TEST_USER_PASSWORD` | Login şifresi | — |
+| `TEST_ENV` | `production` / `staging` / `local` | `production` |
 
 ---
 
-## Proje Yapısı
+## CI/CD Pipeline
 
-\`\`\`
-pages/
-  BasePage.ts              # Abstract base class
-  HomePage.ts              # Ana sayfa POM
-  LoginPage.ts             # Login sayfası POM
-  DashboardPage.ts         # Dashboard POM
-  components/
-    Header.ts
-    Footer.ts
-tests/
-  homepage/
-    homepage.smoke.spec.ts        Sprint 1
-    homepage.regression.spec.ts   Sprint 1
-    homepage.responsive.spec.ts   Sprint 1
-  navigation/
-    navigation.spec.ts            Sprint 1
-  auth/
-    login.spec.ts                 Sprint 2
-  dashboard/
-    dashboard.smoke.spec.ts       Sprint 3 & 4
-    dashboard.regression.spec.ts  Sprint 3 & 4
-fixtures/
-  base.fixture.ts
-utils/
-  constants.ts
-  helpers.ts
-config/
-  environments.ts
-setup-auth.ts
-.github/
-  workflows/
-    playwright.yml
-\`\`\`
+`.github/workflows/playwright.yml` üç aşamalıdır:
+
+**1. Smoke** — Her push ve PR'da Chromium'da çalışır. Fail ederse regression başlamaz.
+
+**2. Regression** — Smoke geçince Chromium, Firefox ve WebKit'te paralel çalışır. Her browser bağımsız job'dur.
+
+**3. Auth setup** — Regression job'larından önce `tests/auth/setup.spec.ts` çalışır, `auth.json` oluşturur, dashboard testleri bu dosyayı kullanır.
+
+**Zamanlanmış çalışma:** Her gün 06:00 UTC'de production health check.
+
+```
+GitHub Secrets → Settings → Actions:
+  TEST_USER_EMAIL
+  TEST_USER_PASSWORD
+```
 
 ---
 
-## Test Sonuçları (Son Çalışma)
+## Bilinen Buglar
 
-| Suite | Passed | Failed | Skipped | Süre |
-|-------|--------|--------|---------|------|
-| Smoke | 54 / 54 | 0 | 0 | ~37sn |
-| Regression | 198 / 198 | 0 | 3 | ~2.1dk |
+| ID | Severity | Sayfa | Açıklama |
+|----|:--------:|-------|----------|
+| BUG-001 | Minor | Footer | Orphan "OK" text |
+| BUG-002 | Major | Footer | Placeholder tel: +90 212 123 45 67 |
+| BUG-003 | Minor | Homepage | Blog section unauthenticated'da boş |
+| BUG-004 | Minor | Responsive | Tablet 768px horizontal scroll |
+| BUG-005 | Minor | Mobile | Giriş Yap hamburger menüde gizli |
+| BUG-006 | Major | Login | Back butonu session kırmıyor |
+| BUG-007 | Major | Login | Rate limiting — 15dk IP kilidi |
+| BUG-008 | Major | Deneme Analizi | ChatGPT servisi yapılandırılmamış |
+| BUG-009 | Minor | İstatistikler | Haftalık Plan butonu redirect etmiyor |
 
-3 skipped: Login testleri — TEST_USER_EMAIL tanımlı değilse CI'da skip edilir.
-
----
-
-## Sprint Planı
-
-| Sprint | Kapsam | Test Sayısı | Durum |
-|--------|--------|-------------|-------|
-| Sprint 1 | Homepage, Navigation, Responsive | 54 | Tamamlandı |
-| Sprint 2 | Login, Auth flow | 14 | Tamamlandı |
-| Sprint 3 | Dashboard session, Auth guard | 17 | Tamamlandı |
-| Sprint 4 | Haftalık Plan, Günlük Görevler, Profil, Takvim, Not Defteri, Arkadaşlar, Deneme Analizi | 33 | Tamamlandı |
+Detaylı reproduce adımları, teknik analiz ve çözüm önerileri için `BUG_REPORT.md` dosyasına bak.
 
 ---
 
-## Confirmed Bug Listesi
+## Yeni Test Yazma
 
-| ID | Severity | Sayfa | Bug | Durum |
-|----|----------|-------|-----|-------|
-| BUG-001 | Minor | Footer | Orphan OK text görünüyor | Open |
-| BUG-002 | Major | Footer | Sahte telefon numarası +90 212 123 45 67 | Open |
-| BUG-003 | Minor | Homepage | Blog section görünür ama içerik yok | Open |
-| BUG-004 | Minor | Homepage | Tablet 768px horizontal scroll | Open |
-| BUG-005 | Minor | Homepage | Mobilde Giriş Yap hamburger menüde gizli | Open |
-| BUG-006 | Major | Login | Back butonu session korumuyor | Open |
-| BUG-007 | Major | Login | Rate limiting — çok fazla denemede 15dk kilit | Open |
-| BUG-008 | Major | Deneme Analizi | ChatGPT servisi yapılandırılmamış | Open |
-| BUG-009 | Minor | İstatistikler | Haftalık Plan Oluştur butonu redirect etmiyor | Open |
-
----
-
-## CI/CD
-
-GitHub Actions pipeline .github/workflows/playwright.yml içinde tanımlı.
-
-Tetikleyiciler:
-- Her push ve PR'da smoke suite (Chromium)
-- Smoke geçince regression paralel olarak Chromium, Firefox, WebKit
-- Her gün 06:00 UTC production health check
-
-Rate Limiting Notu:
-Login testleri çok hızlı çalışınca site 15 dakika IP bazlı kilit uygular.
-CI'da TEST_USER_EMAIL secret tanımlı değilse login testleri otomatik skip edilir.
-
-GitHub Secrets:
-- TEST_USER_EMAIL
-- TEST_USER_PASSWORD
-
----
-
-## Yeni Test Eklemek
-
-1. İlgili pages/ dosyasına POM metodu ekle
-2. tests/ altında uygun spec dosyasına test yaz
-3. @smoke veya @regression tag'i ekle
-4. npm run test:smoke veya npm run test:regression ile doğrula
-5. Commit ve push — CI otomatik çalışır
+1. Selector için önce `npx playwright open --load-storage=auth.json <URL>` ile sayfayı incele
+2. `pages/` altında POM metodunu ekle veya güncelle
+3. `tests/` altında spec dosyasına `@smoke` veya `@regression` tag'i ile test yaz
+4. `npm run test:smoke` veya `npm run test:regression` ile lokal doğrula
+5. Commit & push — CI otomatik tetiklenir
