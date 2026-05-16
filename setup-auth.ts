@@ -1,4 +1,6 @@
 import { chromium } from '@playwright/test';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 (async () => {
   const browser = await chromium.launch({ headless: false });
