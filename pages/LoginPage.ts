@@ -34,6 +34,18 @@ export class LoginPage extends BasePage {
     await this.submitButton.click();
   }
 
+  async dismissNotificationPrompt(): Promise<void> {
+    // "Bildirimlere izin verin" banner'ını kapat
+    const dismissBtn = this.page.getByRole('button', { name: /sonra|kapat|izin verme/i })
+      .or(this.page.locator('button').filter({ hasText: /sonra/i }))
+      .or(this.page.locator('[aria-label="kapat"], [aria-label="close"]'));
+    const visible = await dismissBtn.isVisible().catch(() => false);
+    if (visible) {
+      await dismissBtn.click();
+      await this.page.waitForTimeout(300);
+    }
+  }
+
   async loginAndExpectSuccess(email: string, password: string): Promise<void> {
     await this.login(email, password);
     // URL'nin /giris'ten başka bir şeye değişmesini bekle
