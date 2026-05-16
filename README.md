@@ -17,17 +17,20 @@ cd koclukakademisi-e2e
 npm install
 npx playwright install
 cp .env.example .env
+# .env dosyasına TEST_USER_EMAIL ve TEST_USER_PASSWORD ekle
 ```
 
-## Auth Session Oluşturma
+---
 
-Dashboard testleri Playwright storage state kullanır. İlk çalıştırmadan önce session oluştur:
+## Auth
+
+Dashboard testleri Playwright storage state kullanır. Credentials `.env` dosyasından okunur (repo'ya commit edilmez), CI'da GitHub Secrets üzerinden alınır.
 
 ```bash
 npx ts-node setup-auth.ts
 ```
 
-Script headful browser açar. Giriş yaptıktan sonra terminalde Enter'a bas. `auth.json` oluşur ve dashboard testleri bu dosyayı kullanır. Dosya `.gitignore`'dadır, commit edilmez. Session süresi dolduğunda tekrar çalıştır.
+`auth.json` headless browser ile otomatik oluşturulur — manuel giriş gerekmez. Session süresi dolduğunda tekrar çalıştır.
 
 ---
 
@@ -61,16 +64,16 @@ npm run report
 ## Mimari
 
 ```
-pages/                  POM katmanı
+pages/
   BasePage.ts           Tüm page object'lerin base class'ı
   HomePage.ts           Ana sayfa
   LoginPage.ts          Login sayfası
   DashboardPage.ts      Dashboard sayfası
   components/
-    Header.ts           Header component
-    Footer.ts           Footer component
+    Header.ts
+    Footer.ts
 
-tests/                  Test dosyaları
+tests/
   homepage/             Smoke + Regression + Responsive
   navigation/           Nav link testleri
   auth/                 Login, session, rate limit
@@ -83,14 +86,13 @@ utils/
 config/
   environments.ts       Production / Staging / Local config
 
-setup-auth.ts           Auth.json oluşturan script
+setup-auth.ts           Auth session oluşturan headless script
 playwright.config.ts    Paralel execution, browser matrix, reporter config
 ```
 
 ### Page Object Modeli
 
 ```typescript
-// Örnek kullanım
 const homePage = new HomePage(page);
 await homePage.open();
 await homePage.header.clickLogin();
@@ -131,7 +133,7 @@ test.describe('Dashboard @regression', () => {
 | Değişken | Açıklama | Default |
 |----------|----------|---------|
 | `BASE_URL` | Test URL'i | `https://koclukakademisi.com` |
-| `TEST_USER_EMAIL` | Login kullanıcısı | `hasan@gmail.com` |
+| `TEST_USER_EMAIL` | Login kullanıcısı | — |
 | `TEST_USER_PASSWORD` | Login şifresi | — |
 | `TEST_ENV` | `production` / `staging` / `local` | `production` |
 
@@ -143,14 +145,14 @@ test.describe('Dashboard @regression', () => {
 
 **1. Smoke** — Her push ve PR'da Chromium'da çalışır. Fail ederse regression başlamaz.
 
-**2. Regression** — Smoke geçince Chromium, Firefox ve WebKit'te paralel çalışır. Her browser bağımsız job'dur.
+**2. Auth Setup** — Regression job'larından önce `setup-auth.ts` headless olarak çalışır, credentials GitHub Secrets'tan okunur, `auth.json` oluşturulur.
 
-**3. Auth setup** — Regression job'larından önce `tests/auth/setup.spec.ts` çalışır, `auth.json` oluşturur, dashboard testleri bu dosyayı kullanır.
+**3. Regression** — Smoke geçince Chromium, Firefox ve WebKit'te paralel çalışır.
 
-**Zamanlanmış çalışma:** Her gün 06:00 UTC'de production health check.
+**Zamanlanmış:** Her gün 06:00 UTC'de production health check.
 
 ```
-GitHub Secrets → Settings → Actions:
+GitHub → Settings → Secrets → Actions:
   TEST_USER_EMAIL
   TEST_USER_PASSWORD
 ```
@@ -171,14 +173,14 @@ GitHub Secrets → Settings → Actions:
 | BUG-008 | Major | Deneme Analizi | ChatGPT servisi yapılandırılmamış |
 | BUG-009 | Minor | İstatistikler | Haftalık Plan butonu redirect etmiyor |
 
-Detaylı reproduce adımları, teknik analiz ve çözüm önerileri için `BUG_REPORT.md` dosyasına bak.
+Detaylı reproduce adımları ve çözüm önerileri için `BUG_REPORT.md` dosyasına bak.
 
 ---
 
 ## Yeni Test Yazma
 
-1. Selector için önce `npx playwright open --load-storage=auth.json <URL>` ile sayfayı incele
+1. `npx playwright open --load-storage=auth.json <URL>` ile sayfayı incele
 2. `pages/` altında POM metodunu ekle veya güncelle
-3. `tests/` altında spec dosyasına `@smoke` veya `@regression` tag'i ile test yaz
-4. `npm run test:smoke` veya `npm run test:regression` ile lokal doğrula
+3. `tests/` altına `@smoke` veya `@regression` tag'i ile test yaz
+4. `npm run test:smoke` ile lokal doğrula
 5. Commit & push — CI otomatik tetiklenir
