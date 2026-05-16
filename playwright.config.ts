@@ -22,6 +22,7 @@ export default defineConfig({
     actionTimeout: 10_000,
     navigationTimeout: 30_000,
     locale: 'tr-TR',
+    permissions: [],  // Tüm browser permission prompt'larını reddet
   },
   projects: [
     {
