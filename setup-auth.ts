@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 
 (async () => {
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
+  const context = await browser.newContext({ permissions: ['notifications'] });
   const page = await context.newPage();
   await page.goto('https://koclukakademisi.com/giris');
   
